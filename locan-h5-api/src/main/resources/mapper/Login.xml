@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ps.mapper.LoginMapper">
+
+    <!--用户登录的sql-->
+    <select id="userLogin" resultType="com.ps.domain.UserVO">
+        select username,password,id,phone from user_t where phone = #{phone} and password = #{password};
+    </select>
+    <!--用户注册的sql 先判断这个账号存不存在，不存在就注册成功-->
+    <select id="checkRegister" resultType="com.ps.domain.UserVO">
+        select phone,password from user_t where phone = #{phone} and password = #{password};
+    </select>
+
+    <!--注册-->
+    <insert id="register" parameterType="UserVO">
+        insert into user_t (id,phone,password)
+            values (
+            (
+                SELECT ifnull(max(id), 0) + 1
+                FROM (SELECT * FROM user_t) id
+            ),
+        #{phone},
+        #{password});
+    </insert>
+
+    <!--存储登录 /注册 验证码-->
+    <insert id="loginCode" parameterType="com.ps.domain.CodeVO">
+        INSERT INTO short_message_t (
+            id,
+            user_phone,
+            short_message,
+            type_code
+        )
+        VALUES
+            (
+                (
+                    SELECT
+                        ifnull(max(id), 0) + 1
+                    FROM
+                        (SELECT * FROM short_message_t) id
+                ),
+                #{phone},
+                #{verify},
+                #{type}
+            )
+    </insert>
+    <!--获取验证码-->
+    <select id="getcode" resultType="com.ps.domain.CodeVO">
+        select short_message as verify,
+        id,
+       time_code codeTime,
+       user_phone userPhone,
+      type_code type
+         from short_message_t
+        where id=(select max(id) from short_message_t where user_phone=#{userPhone} and type_code=#{type})
+    </select>
+
+
+</mapper>

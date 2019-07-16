@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ps.mapper.BorrowMapper">
+
+    <!--插入一条还款信息-->
+    <insert id="borrow" parameterType="com.ps.domain.BorrowVO">
+        insert into borrow_money_t (id,borrow_money,borrow_number,user_phone,audit_status,total_interest)
+        values (
+            (
+                SELECT ifnull(max(id), 0) + 1
+                FROM (SELECT * FROM borrow_money_t) id
+            ),
+            #{borrowMoney},
+            #{borrowNumber},
+            #{userPhone},
+            0,
+            (select ( interest * #{borrowMoney} ) from config_t c)
+        )
+    </insert>
+
+    <!--获取验证码-->
+    <select id="getBorrowCode" parameterType="com.ps.domain.CodeVO" resultType="com.ps.domain.CodeVO">
+        select short_message verify FROM short_message_t
+        where id=(select max(id) from short_message_t where user_phone=#{userPhone} and type_code=#{type})
+    </select>
+
+    <!--借钱时根据phone 效验最大额度 -->
+    <select id="getMaxQuota" resultType="Integer">
+        select quota from user_t where phone=#{phone}
+    </select>
+
+    <!--借钱审核状态  查找最大的id那个就是最新的-->
+    <select id="borrowStatus" parameterType="com.ps.domain.BorrowVO" resultType="com.ps.domain.BorrowVO">
+        select id borrowId,audit_status auditStatus,borrow_money borrowMoney,total_interest totalInterest from borrow_money_t
+        where id=(select  max(id) from  borrow_money_t where user_phone= #{userPhone})
+    </select>
+
+    <!--<select id="queryBorrow" parameterType="com.ps.domain.BorrowVO" resultType="com.ps.domain.BorrowVO">
+        select id borrowId,
+        audit_status auditStatus,
+        borrow_money borrowMoney,
+        borrow_number borrowNumber,
+        borrow_time borrowTime,
+        user_phone userPhone
+        FROM borrow_money_t
+        where id=#{id}
+    </select>-->
+
+    <resultMap id="queryRe" type="com.ps.domain.RepaymentVO">
+        <id column="rid" property="id"></id>
+        <result column="money" property="money"></result>
+        <result column="time" property="time"></result>
+        <result column="state" property="state"></result>
+        <result column="borrowId" property="borrowId"></result>
+        <result column="borrowMoney" property="borrowVO.borrowMoney"></result>
+        <result column="borrowNumber" property="borrowVO.borrowNumber"></result>
+        <result column="borrowTime" property="borrowVO.borrowTime"></result>
+        <result column="totalInterest" property="borrowVO.totalInterest"></result>
+        <result column="borrowMoney" property="borrowVO.borrowMoney"></result>
+        <result column="countMoney" property="countMoney"></result>
+    </resultMap>
+    <select id="queryRepayment" resultMap="queryRe">
+        SELECT
+            r.id rid,
+            r.repayment_money money,
+            r.repayment_time time,
+            CASE r.repayment_state
+                WHEN 1 THEN
+                    '未开始'
+                WHEN 2 THEN
+                    '待还款'
+                WHEN 3 THEN
+                    '已还款'
+                WHEN 4 THEN
+                    '已逾期'
+                END AS state,
+            r.borrow_id borrowId,
+            b.borrow_money 'borrowMoney',
+            b.borrow_number 'borrowNumber',
+            b.borrow_time 'borrowTime',
+            b.total_interest 'totalInterest',
+            (
+                b.borrow_money + b.total_interest
+            ) 'countMoney'
+        FROM
+            repayment_t r
+        LEFT JOIN borrow_money_t b ON (r.borrow_id = b.id)
+        where r.borrow_id = #{borrowId}
+    </select>
+    <!--点击还款  还款表状态-->
+    <!--1.待还款 2.已还款 3.已逾期-->
+    <update id="repaymentMoney" parameterType="com.ps.domain.RepaymentVO">
+          update repayment_t set repayment_state=2 where id=#{id}
+    </update>
+
+    <!--本期需还款-->
+    <select id="getRepayment" resultType="com.ps.domain.RepaymentVO">
+        select
+            r.id id,
+            r.repayment_money money,
+            r.repayment_time time,
+            r.repayment_state state,
+            r.borrow_id borrowId
+        from repayment_t r
+        where r.borrow_id = #{borrowId}
+        and
+        r.repayment_state=2
+    </select>
+
+    <!--查询还未付款的-->
+    <select id="inform" resultType="com.ps.domain.RepaymentVO">
+        select * FROM  repayment_t where repayment_state = '2'
+    </select>
+
+    <!--查询到用户信息-->
+    <resultMap id="query" type="com.ps.domain.BorrowVO">
+        <result column="id" property="userVO.id"></result>
+        <result column="idcard" property="userVO.phone"></result>
+        <result column="time" property="repaymentVO.time"></result>
+
+    </resultMap>
+
+    <select id="informUser" resultMap="query">
+        SELECT
+                u.id id,
+                u.phone phone,
+                r.repayment_time time
+                FROM
+                    repayment_t r
+                LEFT JOIN borrow_money_t b ON r.borrow_id = b.id
+                LEFT JOIN user_t u ON u.phone = b.user_phone
+                WHERE
+                    r.id = #{id}
+    </select>
+    <!--查询出所有已逾期的 -->
+    <select id="informstate4" resultType="com.ps.domain.RepaymentVO">
+            SELECT
+                *, DATEDIFF(now(), repayment_time) overdue
+            FROM
+                repayment_t
+            WHERE
+                repayment_state = 4
+    </select>
+
+    <!--查询时间差-->
+    <select id="overdue" resultType="String">
+        select * from repayment_t
+    </select>
+    <!--修改money  这是已逾期后的还款金额-->
+    <update id="updateMoney" parameterType="BigDecimal">
+        update repayment_t set repayment_money=#{money}
+    </update>
+
+    <!--查询到已逾期的 改状态为已逾期-->
+    <update id="updateOverdueState" parameterType="Integer">
+        update repayment_t set repayment_state=4 where id=#{id}
+    </update>
+
+
+</mapper>

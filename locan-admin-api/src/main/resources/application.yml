@@ -1,0 +1,56 @@
+server:
+  #端口
+  port: 8082
+#spring
+spring:
+  profiles:
+    active: dev
+  #数据库
+  datasource:
+    username: root
+    password: ps123456
+    url: jdbc:mysql://localhost:3306/loans?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.alibaba.druid.pool.DruidDataSource
+
+  mail:
+    host: smtp.qq.com
+    username: 1115820867@qq.com
+    password: jjxtwfnfpycbiffa
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 100MB
+
+#mybatis
+mybatis:
+  mapper-locations: /mapper/**/*.xml
+  #类别名
+  type-aliases-package: com.ps.domain
+  #type‐handlers‐package: com.ps.mapper.StudentMapper
+
+#debug: true
+logging:
+  path: D:\log
+  #设置级别 这里是root级别 也可以设置为package级别
+  level.root: info
+  #level.com.ps.controller: debug
+#pagehelper分页插件配置
+pagehelper:
+  helperDialect: mysql
+  reasonable: true
+  supportMethodsArguments: true
+  params:
+    count: countSql
+
+upload.path: D:/IDEA/uplode/
+
+date: 0,3,5
+
+
+
+
+
+
+

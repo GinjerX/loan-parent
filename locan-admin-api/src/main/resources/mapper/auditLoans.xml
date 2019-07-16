@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ps.mapper.AuditLoanMapper">
+    <!--查询借款表 审核贷款-->
+    <select id="queryAudit" resultType="com.ps.domain.BorrowVO">
+            SELECT
+                id borrowId,
+                borrow_money borrowMoney,
+                borrow_number borrowNumber,
+                borrow_time borrowTime,
+                user_phone userPhonem,
+                total_interest totalInterest,
+                audit_status auditStatus
+            FROM
+                borrow_money_t
+	</select>
+
+    <select id="queryBorrow" parameterType="com.ps.domain.BorrowVO" resultType="com.ps.domain.BorrowVO">
+        select id borrowId,
+        audit_status auditStatus,
+        borrow_money borrowMoney,
+        borrow_number borrowNumber,
+        borrow_time borrowTime,
+        user_phone userPhone
+        FROM borrow_money_t
+        where id=#{id}
+    </select>
+
+    <!--生成还款表-->
+    <insert id="repayment" parameterType="com.ps.domain.RepaymentVO">
+        insert into repayment_t (id,repayment_money,repayment_time,repayment_state,borrow_id)
+        values (
+          (select ifnull(max(id),0)+1 FROM (select *from repayment_t) id),
+          #{money},
+          #{time},
+          1,
+          #{borrowId}
+        )
+    </insert>
+
+    <update id="updateState" parameterType="Integer">
+        update borrow_money_t set audit_status=1 where id=#{borrowId}
+    </update>
+
+    <select id="queryUser" resultType="com.ps.domain.UserVO">
+        select * from user_t;
+    </select>
+
+    <update id="updateUser" parameterType="Integer">
+        update user_t set audit_status=1 where id=#{id}
+    </update>
+
+
+    <update id="updateInterest" parameterType="String">
+        update config_t set interest=#{interset} where id=1
+    </update>
+
+    <select id="queryInterset" resultType="String">
+        select interest from config_t;
+    </select>
+
+
+    <resultMap id="query" type="com.ps.domain.BorrowVO">
+        <result column="money" property="repaymentVO.money"></result>
+        <result column="idcard" property="userVO.identityCard"></result>
+
+    </resultMap>
+    <select id="queryCollection" resultMap="query">
+        SELECT
+                r.repayment_money money,
+                u.identity_card idcard
+            FROM
+                borrow_money_t t
+            LEFT JOIN repayment_t r ON (t.id = r.borrow_id)
+            LEFT JOIN user_t u ON (u.phone = t.user_phone)
+            WHERE
+                t.user_phone = #{phone}
+    </select>
+
+</mapper>
