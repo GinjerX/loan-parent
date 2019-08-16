@@ -109,9 +109,9 @@
     </select>
 
     <!--查询还未付款的-->
-    <select id="inform" resultType="com.ps.domain.RepaymentVO">
+   <!-- <select id="inform" resultType="com.ps.domain.RepaymentVO">
         select * FROM  repayment_t where repayment_state = '2'
-    </select>
+    </select>-->
 
     <!--查询到用户信息-->
     <resultMap id="query" type="com.ps.domain.BorrowVO">
@@ -148,7 +148,7 @@
         select * from repayment_t
     </select>
     <!--修改money  这是已逾期后的还款金额-->
-    <update id="updateMoney" parameterType="BigDecimal">
+    <update id="updateMoney">
         update repayment_t set repayment_money=#{money}
     </update>
 
